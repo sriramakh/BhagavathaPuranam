@@ -67,6 +67,23 @@ export interface Episode {
   scenes: EpisodeScene[];
 }
 
+export interface Shloka {
+  id: string;
+  canto: number;
+  chapter: number;
+  verse: string;
+  sanskrit: string;
+  transliteration: string;
+  translation: string;
+  summary: string;
+  characters: string[];
+  location: string;
+  themes: string[];
+  source_name: string;
+  source_url: string;
+  license: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -93,13 +110,22 @@ export function resolveCharacters(text: string) {
   });
 }
 
-export function createEpisodePlan(input_text: string, target_scene_count?: number) {
+export function listShlokas(params: { q?: string; canto?: number; chapter?: number } = {}) {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.canto) search.set("canto", String(params.canto));
+  if (params.chapter) search.set("chapter", String(params.chapter));
+  const query = search.toString();
+  return request<Shloka[]>(`/api/v1/corpus/shlokas${query ? `?${query}` : ""}`);
+}
+
+export function createEpisodePlan(input_text: string, target_scene_count?: number, source_refs: string[] = []) {
   return request<Episode>("/api/v1/episodes/plan", {
     method: "POST",
     body: JSON.stringify({
       input_text,
       source_mode: "plot",
-      source_refs: [],
+      source_refs,
       target_scene_count,
     }),
   });

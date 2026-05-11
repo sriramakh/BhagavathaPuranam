@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.character import CharacterAlias, CharacterForm, CharacterIdentity
+from app.models.corpus import CorpusShloka
 from app.services.text import normalize_name
 
 
@@ -168,11 +169,144 @@ INITIAL_CHARACTERS = [
     },
 ]
 
+INITIAL_SHLOKAS = [
+    {
+        "canto": 1,
+        "chapter": 1,
+        "verse": "1",
+        "sanskrit": "",
+        "transliteration": "",
+        "translation": "",
+        "summary": (
+            "Invocation and philosophical opening of the Bhagavatham: meditate on the Supreme Truth, "
+            "the source, sustainer, and knower of all creation."
+        ),
+        "characters": ["Sri Krishna"],
+        "location": "Cosmic devotional opening",
+        "themes": ["creation", "supreme truth", "devotion", "inquiry"],
+        "source_name": "Bhagavatham repository seed",
+        "source_url": "https://gretil.sub.uni-goettingen.de/gretil/corpustei/transformations/html/sa_bhAgavatapurANa.htm",
+        "license": "Source metadata only; full Sanskrit/translation ingestion pending license review",
+    },
+    {
+        "canto": 3,
+        "chapter": 25,
+        "verse": "21-44",
+        "sanskrit": "",
+        "transliteration": "",
+        "translation": "",
+        "summary": (
+            "Kapila teaches Devahuti about devotion, the nature of consciousness, and the path that "
+            "turns the heart toward liberation."
+        ),
+        "characters": ["Kapila", "Devahuti"],
+        "location": "Sage Kapila's hermitage",
+        "themes": ["teaching", "devotion", "liberation", "mother and son"],
+        "source_name": "Bhagavatham repository seed",
+        "source_url": "https://gretil.sub.uni-goettingen.de/gretil/corpustei/transformations/html/sa_bhAgavatapurANa.htm",
+        "license": "Source metadata only; full Sanskrit/translation ingestion pending license review",
+    },
+    {
+        "canto": 7,
+        "chapter": 5,
+        "verse": "23-24",
+        "sanskrit": "",
+        "transliteration": "",
+        "translation": "",
+        "summary": (
+            "Prahlada describes the nine forms of devotion, presenting bhakti as hearing, chanting, "
+            "remembering, serving, worshiping, praying, serving as a servant, friendship, and surrender."
+        ),
+        "characters": ["Prahlada Maharaja", "Hiranyakashipu"],
+        "location": "Hiranyakashipu's palace school",
+        "themes": ["devotion", "teaching", "courage", "bhakti"],
+        "source_name": "Bhagavatham repository seed",
+        "source_url": "https://gretil.sub.uni-goettingen.de/gretil/corpustei/transformations/html/sa_bhAgavatapurANa.htm",
+        "license": "Source metadata only; full Sanskrit/translation ingestion pending license review",
+    },
+    {
+        "canto": 7,
+        "chapter": 8,
+        "verse": "17-34",
+        "sanskrit": "",
+        "transliteration": "",
+        "translation": "",
+        "summary": (
+            "Narasimha appears to protect Prahlada and defeat Hiranyakashipu. The episode should be "
+            "rendered as a devotional, symbolic divine victory without graphic violence."
+        ),
+        "characters": ["Prahlada Maharaja", "Narasimha", "Hiranyakashipu"],
+        "location": "Hiranyakashipu's palace hall",
+        "themes": ["protection", "divine victory", "devotion", "asura conflict"],
+        "source_name": "Bhagavatham repository seed",
+        "source_url": "https://gretil.sub.uni-goettingen.de/gretil/corpustei/transformations/html/sa_bhAgavatapurANa.htm",
+        "license": "Source metadata only; full Sanskrit/translation ingestion pending license review",
+    },
+    {
+        "canto": 10,
+        "chapter": 6,
+        "verse": "1-44",
+        "sanskrit": "",
+        "transliteration": "",
+        "translation": "",
+        "summary": (
+            "Putana comes to harm baby Krishna, but Krishna protects himself and grants her liberation. "
+            "The scene plan should preserve the mythological event without horror or graphic imagery."
+        ),
+        "characters": ["Sri Krishna", "Mother Yashoda", "Nanda Maharaja", "Putana"],
+        "location": "Gokula",
+        "themes": ["baby Krishna", "protection", "liberation", "divine grace"],
+        "source_name": "Bhagavatham repository seed",
+        "source_url": "https://gretil.sub.uni-goettingen.de/gretil/corpustei/transformations/html/sa_bhAgavatapurANa.htm",
+        "license": "Source metadata only; full Sanskrit/translation ingestion pending license review",
+    },
+    {
+        "canto": 10,
+        "chapter": 11,
+        "verse": "35-59",
+        "sanskrit": "",
+        "transliteration": "",
+        "translation": "",
+        "summary": (
+            "Krishna and Balarama enter Vrindavan with the cowherd community, establishing the pastoral "
+            "setting of forests, cows, Yamuna riverbanks, and devotional childhood pastimes."
+        ),
+        "characters": ["Sri Krishna", "Balarama", "Mother Yashoda", "Nanda Maharaja"],
+        "location": "Vrindavan",
+        "themes": ["Vrindavan", "cowherd life", "family", "pastoral devotion"],
+        "source_name": "Bhagavatham repository seed",
+        "source_url": "https://gretil.sub.uni-goettingen.de/gretil/corpustei/transformations/html/sa_bhAgavatapurANa.htm",
+        "license": "Source metadata only; full Sanskrit/translation ingestion pending license review",
+    },
+    {
+        "canto": 10,
+        "chapter": 25,
+        "verse": "1-33",
+        "sanskrit": "",
+        "transliteration": "",
+        "translation": "",
+        "summary": (
+            "Krishna lifts Govardhana Hill to protect the people and cows of Vrindavan from Indra's storm, "
+            "showing divine shelter and the beauty of simple devotion."
+        ),
+        "characters": ["Sri Krishna", "Balarama", "Mother Yashoda", "Nanda Maharaja", "Indra"],
+        "location": "Govardhana and Vrindavan",
+        "themes": ["protection", "storm", "Govardhana", "devotion", "divine shelter"],
+        "source_name": "Bhagavatham repository seed",
+        "source_url": "https://gretil.sub.uni-goettingen.de/gretil/corpustei/transformations/html/sa_bhAgavatapurANa.htm",
+        "license": "Source metadata only; full Sanskrit/translation ingestion pending license review",
+    },
+]
+
 
 def seed_initial_data(db: Session) -> None:
+    seed_characters(db)
+    seed_corpus(db)
+
+
+def seed_characters(db: Session) -> None:
     if db.query(CharacterIdentity).count() > 0:
         return
-
     for item in INITIAL_CHARACTERS:
         character = CharacterIdentity(
             canonical_name=item["canonical_name"],
@@ -197,4 +331,12 @@ def seed_initial_data(db: Session) -> None:
         for form in item["forms"]:
             db.add(CharacterForm(character_id=character.id, **form))
 
+    db.commit()
+
+
+def seed_corpus(db: Session) -> None:
+    if db.query(CorpusShloka).count() > 0:
+        return
+    for item in INITIAL_SHLOKAS:
+        db.add(CorpusShloka(**item))
     db.commit()

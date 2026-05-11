@@ -94,13 +94,17 @@ button {
   font-size: 13px;
 }
 
-.main-grid {
+.studio-layout {
   max-width: 1360px;
   margin: 0 auto;
   padding: 24px;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr);
   gap: 20px;
+}
+
+.corpus-panel {
+  grid-column: 1 / -1;
 }
 
 .panel {
@@ -143,6 +147,13 @@ button {
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .button {
@@ -209,6 +220,34 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
+}
+
+.corpus-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.corpus-card {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.corpus-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.license-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .character-card {
@@ -306,7 +345,11 @@ button {
 }
 
 @media (max-width: 980px) {
-  .main-grid {
+  .studio-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .search-row {
     grid-template-columns: 1fr;
   }
 }

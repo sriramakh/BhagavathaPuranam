@@ -1,18 +1,32 @@
 "use client";
 
 import { BookMarked, CircleCheck, ScanSearch, WandSparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createEpisodePlan, Episode, resolveCharacters, ResolveResponse } from "@/lib/api";
+import type { SelectedSource } from "@/components/StudioWorkspace";
 
 const SAMPLE = "Krishna and Balarama enter Vrindavan with the cowherd boys. Mother Yashoda watches with love as Krishna plays his flute near the Yamuna. A demon appears and Krishna protects everyone with divine grace.";
 
-export function EpisodePlanner() {
+export function EpisodePlanner({
+  selectedSources,
+  onClearSources,
+}: {
+  selectedSources: SelectedSource[];
+  onClearSources: () => void;
+}) {
   const [text, setText] = useState(SAMPLE);
   const [sceneCount, setSceneCount] = useState(8);
   const [resolveResult, setResolveResult] = useState<ResolveResponse | null>(null);
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const sourceRefs = useMemo(() => selectedSources.map((source) => source.ref), [selectedSources]);
+
+  useEffect(() => {
+    if (selectedSources.length === 0) return;
+    setText(selectedSources.map((source) => source.text).join("\n\n"));
+  }, [selectedSources]);
 
   async function handleResolve() {
     setLoading("resolve");
@@ -30,7 +44,7 @@ export function EpisodePlanner() {
     setLoading("plan");
     setError(null);
     try {
-      const next = await createEpisodePlan(text, sceneCount);
+      const next = await createEpisodePlan(text, sceneCount, sourceRefs);
       setEpisode(next);
       setResolveResult({
         matches: [],
@@ -66,6 +80,19 @@ export function EpisodePlanner() {
             onChange={(event) => setText(event.target.value)}
           />
         </div>
+        {selectedSources.length > 0 && (
+          <div className="resolve-box">
+            <div className="scene-title">Selected repository sources</div>
+            <div className="small-list">
+              {selectedSources.map((source) => (
+                <span className="tag" key={source.ref}>{source.ref}</span>
+              ))}
+            </div>
+            <button className="button" style={{ marginTop: 10 }} onClick={onClearSources}>
+              Clear Sources
+            </button>
+          </div>
+        )}
         <div className="field">
           <label htmlFor="scene-count">Target scenes</label>
           <select

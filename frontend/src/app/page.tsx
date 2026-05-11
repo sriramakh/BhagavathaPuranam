@@ -1,6 +1,5 @@
 import { BookOpenCheck, Database, ShieldCheck } from "lucide-react";
-import { CharacterRegistry } from "@/components/CharacterRegistry";
-import { EpisodePlanner } from "@/components/EpisodePlanner";
+import { StudioWorkspace } from "@/components/StudioWorkspace";
 
 export default function Home() {
   return (
@@ -31,10 +30,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="main-grid">
-        <CharacterRegistry />
-        <EpisodePlanner />
-      </main>
+      <StudioWorkspace />
     </div>
   );
 }
