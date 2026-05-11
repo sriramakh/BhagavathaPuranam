@@ -9,7 +9,18 @@ INITIAL_CHARACTERS = [
     {
         "canonical_name": "Sri Krishna",
         "category": "avatar",
-        "aliases": ["Krishna", "Kanha", "Gopala", "Govinda", "Damodara", "Madhava", "Mukunda"],
+        "aliases": [
+            "Krishna",
+            "Kanha",
+            "Gopala",
+            "Govinda",
+            "Damodara",
+            "Madhava",
+            "Mukunda",
+            "Supreme Truth",
+            "Bhagavan",
+            "Supreme Lord",
+        ],
         "description": "The Supreme Lord appearing in the Yadava lineage and Vrindavan pastimes.",
         "forms": [
             {
