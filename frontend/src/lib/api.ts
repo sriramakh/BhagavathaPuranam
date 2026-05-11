@@ -119,6 +119,28 @@ export interface Shloka {
   license: string;
 }
 
+export interface TatparyaReference {
+  id: string;
+  canto: number;
+  chapter: number;
+  marker_text: string;
+  source_name: string;
+  source_path: string;
+  ocr_language: string;
+  line_start: number;
+  line_end: number;
+  text_excerpt: string;
+  verse_markers: string[];
+  parse_quality: string;
+  text?: string | null;
+}
+
+export interface TatparyaStats {
+  total_references: number;
+  by_canto: Record<string, number>;
+  source_name: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -152,6 +174,19 @@ export function listShlokas(params: { q?: string; canto?: number; chapter?: numb
   if (params.chapter) search.set("chapter", String(params.chapter));
   const query = search.toString();
   return request<Shloka[]>(`/api/v1/corpus/shlokas${query ? `?${query}` : ""}`);
+}
+
+export function listTatparyaReferences(params: { q?: string; canto?: number; chapter?: number } = {}) {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.canto) search.set("canto", String(params.canto));
+  if (params.chapter) search.set("chapter", String(params.chapter));
+  const query = search.toString();
+  return request<TatparyaReference[]>(`/api/v1/corpus/tatparya${query ? `?${query}` : ""}`);
+}
+
+export function getTatparyaStats() {
+  return request<TatparyaStats>("/api/v1/corpus/tatparya/stats");
 }
 
 export function createEpisodePlan(input_text: string, target_scene_count?: number, source_refs: string[] = []) {

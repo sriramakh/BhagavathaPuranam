@@ -166,6 +166,45 @@ button {
   margin-bottom: 14px;
 }
 
+.repository-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tab-button {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tab-button.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: white;
+}
+
+.tab-button span {
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  padding: 2px 7px;
+  font-size: 12px;
+}
+
+.tab-button.active span {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+}
+
 .button {
   border: 1px solid var(--line);
   background: var(--surface);
@@ -218,6 +257,10 @@ button {
   border-radius: 8px;
   padding: 10px 11px;
   outline: none;
+}
+
+.compact-select {
+  width: 180px;
 }
 
 .textarea {
@@ -469,6 +512,10 @@ button {
 
   .search-row {
     grid-template-columns: 1fr;
+  }
+
+  .compact-select {
+    width: 100%;
   }
 
   .scene-edit-grid {
