@@ -16,5 +16,9 @@ dist/
 .env
 .env.local
 
+# Source books / generated OCR artifacts
+/*.pdf
+/*.PDF
+
 # OS
 .DS_Store
