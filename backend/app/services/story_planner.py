@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.episode import Episode, EpisodeScene
 from app.services.character_memory import resolve_characters
 from app.services.style_bible import scene_prompt_base
+from app.services.tatparya_lookup import tatparya_context_for_source_refs
 from app.services.text import split_sentences, title_from_input
 
 
@@ -20,6 +21,7 @@ def create_episode_plan(
     matches, unknown = resolve_characters(db, input_text)
     character_ids = [m.character.id for m in matches]
     title = title_from_input(input_text, fallback="Bhagavatham Episode")
+    tatparya_contexts = tatparya_context_for_source_refs(db, source_refs or [])
 
     episode = Episode(
         title=title,
@@ -30,6 +32,11 @@ def create_episode_plan(
             "Matched existing characters: "
             + ", ".join(m.character.canonical_name for m in matches)
             + (f". Possible new characters: {', '.join(unknown)}." if unknown else ".")
+            + (
+                f" Tatparya Nirnaya grounding available for {len(tatparya_contexts)} selected source chapter(s)."
+                if tatparya_contexts
+                else ""
+            )
         ),
     )
     db.add(episode)
@@ -48,7 +55,14 @@ def create_episode_plan(
             background=background,
             character_ids=character_ids,
             intensity=intensity,
-            image_prompt=build_scene_prompt(beat, background, matches, intensity, source_refs or []),
+            image_prompt=build_scene_prompt(
+                beat,
+                background,
+                matches,
+                intensity,
+                source_refs or [],
+                tatparya_contexts,
+            ),
             status="draft",
         )
         db.add(scene)
@@ -146,7 +160,14 @@ def suggest_background(text: str) -> str:
     return "Ancient Indic devotional setting with temple details, lotus motifs, brass lamps, and warm storybook light"
 
 
-def build_scene_prompt(beat: str, background: str, matches, intensity: str, source_refs: list[str]) -> str:
+def build_scene_prompt(
+    beat: str,
+    background: str,
+    matches,
+    intensity: str,
+    source_refs: list[str],
+    tatparya_contexts: list[str] | None = None,
+) -> str:
     character_block = "\n".join(
         format_character_prompt_line(m)
         for m in matches
@@ -163,6 +184,9 @@ def build_scene_prompt(beat: str, background: str, matches, intensity: str, sour
 
 Source references:
 {", ".join(source_refs) if source_refs else "User-provided plot or unsourced draft"}
+
+Tatparya Nirnaya accuracy anchors:
+{chr(10).join(tatparya_contexts or []) if tatparya_contexts else "No Tatparya Nirnaya OCR reference mapped for this source yet."}
 
 Scene beat:
 {beat}

@@ -23,3 +23,22 @@ class CorpusShloka(Base):
     source_name: Mapped[str] = mapped_column(String(160), default="")
     source_url: Mapped[str] = mapped_column(String(500), default="")
     license: Mapped[str] = mapped_column(String(160), default="")
+
+
+class TatparyaReference(Base):
+    __tablename__ = "tatparya_references"
+    __table_args__ = (UniqueConstraint("canto", "chapter", "source_name", name="uq_tatparya_chapter_ref"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    canto: Mapped[int] = mapped_column(Integer, index=True)
+    chapter: Mapped[int] = mapped_column(Integer, index=True)
+    marker_text: Mapped[str] = mapped_column(String(240), default="")
+    source_name: Mapped[str] = mapped_column(String(160), default="Sri Bhagavata Tatparya Nirnaya")
+    source_path: Mapped[str] = mapped_column(String(500), default="")
+    ocr_language: Mapped[str] = mapped_column(String(80), default="san+hin+eng")
+    line_start: Mapped[int] = mapped_column(Integer, default=0)
+    line_end: Mapped[int] = mapped_column(Integer, default=0)
+    text: Mapped[str] = mapped_column(Text, default="")
+    text_excerpt: Mapped[str] = mapped_column(Text, default="")
+    verse_markers: Mapped[list[str]] = mapped_column(JSON, default=list)
+    parse_quality: Mapped[str] = mapped_column(String(80), default="chapter_boundary")
