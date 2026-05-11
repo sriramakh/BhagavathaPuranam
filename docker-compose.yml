@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: bhagavatha-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      APP_ENV: production
+      DATABASE_URL: sqlite:////app/data/bhagavatha.db
+      STORAGE_DIR: /app/storage
+      IMAGE_PROVIDER: grok-imagine
+      CONTENT_DOMAIN: bhagavatham
+      MYTHOLOGY_MODE: "true"
+      FRONTEND_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://46.28.44.35:3002
+    volumes:
+      - bhagavatha-data:/app/data
+      - bhagavatha-storage:/app/storage
+    ports:
+      - "8002:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://46.28.44.35:8002
+    container_name: bhagavatha-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://46.28.44.35:8002
+    depends_on:
+      - backend
+    ports:
+      - "3002:3000"
+
+volumes:
+  bhagavatha-data:
+  bhagavatha-storage:

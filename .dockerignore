@@ -1,0 +1,10 @@
+.git
+.env
+backend/.env
+backend/.venv
+backend/data
+backend/storage
+frontend/.next
+frontend/node_modules
+**/__pycache__
+*.pyc
