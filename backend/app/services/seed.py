@@ -167,6 +167,86 @@ INITIAL_CHARACTERS = [
             }
         ],
     },
+    {
+        "canonical_name": "Putana",
+        "category": "asura",
+        "aliases": ["Putana Rakshasi", "Pootana"],
+        "description": "The rakshasi who comes to Gokula in the baby Krishna episode and receives liberation by Krishna's grace.",
+        "forms": [
+            {
+                "form_name": "Putana in Gokula Episode",
+                "age_stage": "mythological rakshasi",
+                "visual_profile": (
+                    "Tall imposing mythological woman with regal but unsettling presence, ornate Indic garments, "
+                    "dark jewel tones, expressive eyes, and symbolic rakshasi styling without horror or gore."
+                ),
+                "cultural_rules": "Indic rakshasi figure; keep devotional and symbolic, never horror-realistic.",
+                "negative_prompt": "graphic horror, gore, western witch, modern clothing, grotesque monster",
+                "status": "draft",
+                "is_default": True,
+            }
+        ],
+    },
+    {
+        "canonical_name": "Indra",
+        "category": "deva",
+        "aliases": ["Lord Indra", "Devendra", "Sakra"],
+        "description": "King of the devas, associated with rain and storms in the Govardhana episode.",
+        "forms": [
+            {
+                "form_name": "Indra the Deva King",
+                "age_stage": "divine adult",
+                "visual_profile": (
+                    "Majestic deva king with golden crown, royal Indic ornaments, luminous garments, commanding posture, "
+                    "storm-cloud aura, and Airavata or celestial motifs where appropriate."
+                ),
+                "cultural_rules": "Classical deva iconography, not Western thunder-god styling.",
+                "negative_prompt": "greek god, roman armor, viking, western fantasy, modern weapon",
+                "status": "draft",
+                "is_default": True,
+            }
+        ],
+    },
+    {
+        "canonical_name": "Kapila",
+        "category": "avatar",
+        "aliases": ["Lord Kapila", "Kapila Muni"],
+        "description": "The sage-avatar who teaches Devahuti about devotion and liberation.",
+        "forms": [
+            {
+                "form_name": "Sage Kapila",
+                "age_stage": "sage-avatar",
+                "visual_profile": (
+                    "Serene young sage with radiant face, simple saffron garments, matted hair or tied hair, tilaka, "
+                    "calm teaching posture, and soft hermitage light."
+                ),
+                "cultural_rules": "Vedic sage setting with devotional calm, no Western monk or wizard styling.",
+                "negative_prompt": "wizard robe, western monastery, modern classroom, fantasy staff",
+                "status": "draft",
+                "is_default": True,
+            }
+        ],
+    },
+    {
+        "canonical_name": "Devahuti",
+        "category": "devotee",
+        "aliases": ["Mother Devahuti"],
+        "description": "The mother of Kapila who receives teachings on devotion and liberation.",
+        "forms": [
+            {
+                "form_name": "Devahuti Receiving Teachings",
+                "age_stage": "adult",
+                "visual_profile": (
+                    "Graceful contemplative Indian woman in simple sari and modest ornaments, seated respectfully, "
+                    "with thoughtful devotional expression in a hermitage setting."
+                ),
+                "cultural_rules": "Ancient Indic hermitage atmosphere, maternal dignity, devotional humility.",
+                "negative_prompt": "western dress, modern room, european noblewoman",
+                "status": "draft",
+                "is_default": True,
+            }
+        ],
+    },
 ]
 
 INITIAL_SHLOKAS = [
@@ -305,9 +385,31 @@ def seed_initial_data(db: Session) -> None:
 
 
 def seed_characters(db: Session) -> None:
-    if db.query(CharacterIdentity).count() > 0:
-        return
     for item in INITIAL_CHARACTERS:
+        character = (
+            db.query(CharacterIdentity)
+            .filter(CharacterIdentity.canonical_name == item["canonical_name"])
+            .first()
+        )
+        if character:
+            existing_aliases = {alias.alias_normalized for alias in character.aliases}
+            for alias in dict.fromkeys([item["canonical_name"], *item["aliases"]]):
+                normalized = normalize_name(alias)
+                if normalized not in existing_aliases:
+                    db.add(
+                        CharacterAlias(
+                            character_id=character.id,
+                            alias=alias,
+                            alias_normalized=normalized,
+                            confidence=100,
+                        )
+                    )
+            existing_forms = {form.form_name for form in character.forms}
+            for form in item["forms"]:
+                if form["form_name"] not in existing_forms:
+                    db.add(CharacterForm(character_id=character.id, **form))
+            continue
+
         character = CharacterIdentity(
             canonical_name=item["canonical_name"],
             category=item["category"],
@@ -335,8 +437,19 @@ def seed_characters(db: Session) -> None:
 
 
 def seed_corpus(db: Session) -> None:
-    if db.query(CorpusShloka).count() > 0:
-        return
     for item in INITIAL_SHLOKAS:
+        existing = (
+            db.query(CorpusShloka)
+            .filter(
+                CorpusShloka.canto == item["canto"],
+                CorpusShloka.chapter == item["chapter"],
+                CorpusShloka.verse == item["verse"],
+            )
+            .first()
+        )
+        if existing:
+            for key, value in item.items():
+                setattr(existing, key, value)
+            continue
         db.add(CorpusShloka(**item))
     db.commit()

@@ -48,7 +48,7 @@ def create_episode_plan(
             background=background,
             character_ids=character_ids,
             intensity=intensity,
-            image_prompt=build_scene_prompt(beat, background, matches, intensity),
+            image_prompt=build_scene_prompt(beat, background, matches, intensity, source_refs or []),
             status="draft",
         )
         db.add(scene)
@@ -146,9 +146,9 @@ def suggest_background(text: str) -> str:
     return "Ancient Indic devotional setting with temple details, lotus motifs, brass lamps, and warm storybook light"
 
 
-def build_scene_prompt(beat: str, background: str, matches, intensity: str) -> str:
+def build_scene_prompt(beat: str, background: str, matches, intensity: str, source_refs: list[str]) -> str:
     character_block = "\n".join(
-        f"- {m.character.canonical_name}: use approved character identity and default approved visual form."
+        format_character_prompt_line(m)
         for m in matches
     ) or "- No approved recurring characters matched yet; create temporary culturally accurate characters only if needed."
 
@@ -160,6 +160,9 @@ def build_scene_prompt(beat: str, background: str, matches, intensity: str) -> s
 
     return f"""
 {scene_prompt_base()}
+
+Source references:
+{", ".join(source_refs) if source_refs else "User-provided plot or unsourced draft"}
 
 Scene beat:
 {beat}
@@ -175,3 +178,23 @@ Intensity: {intensity}
 
 Make this a polished animated storybook frame for Bhagavatham. No text, no logos, no modern objects.
 """.strip()
+
+
+def format_character_prompt_line(match) -> str:
+    character = match.character
+    default_form = None
+    for form in character.forms:
+        if form.is_default:
+            default_form = form
+            break
+    if default_form is None and character.forms:
+        default_form = character.forms[0]
+
+    if default_form is None:
+        return f"- {character.canonical_name}: use approved character identity and maintain continuity."
+
+    return (
+        f"- {character.canonical_name} ({default_form.form_name}): "
+        f"{default_form.visual_profile} Cultural rules: {default_form.cultural_rules} "
+        f"Avoid: {default_form.negative_prompt}"
+    )
