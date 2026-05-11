@@ -18,9 +18,10 @@ def create_episode_plan(
     source_refs: Optional[list[str]] = None,
     target_scene_count: Optional[int] = None,
 ) -> Episode:
-    matches, unknown = resolve_characters(db, input_text)
+    story_input = prepare_story_input(input_text)
+    matches, unknown = resolve_characters(db, story_input)
     character_ids = [m.character.id for m in matches]
-    title = title_from_input(input_text, fallback="Bhagavatham Episode")
+    title = title_from_input(story_input, fallback="Bhagavatham Episode")
     tatparya_contexts = tatparya_context_for_source_refs(db, source_refs or [])
 
     episode = Episode(
@@ -42,8 +43,8 @@ def create_episode_plan(
     db.add(episode)
     db.flush()
 
-    scene_count = target_scene_count or suggest_scene_count(input_text)
-    beats = create_beats(input_text, scene_count)
+    scene_count = target_scene_count or suggest_scene_count(story_input)
+    beats = create_beats(story_input, scene_count)
     for index, beat in enumerate(beats, start=1):
         intensity = classify_intensity(beat)
         background = suggest_background(beat)
@@ -79,6 +80,45 @@ def suggest_scene_count(input_text: str) -> int:
     if length < 700:
         return 8
     return 10
+
+
+def prepare_story_input(input_text: str) -> str:
+    story_lines: list[str] = []
+    for raw_line in (input_text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        lowered = line.lower()
+        if lowered.startswith("story premise:"):
+            story_lines.append(line.split(":", 1)[1].strip())
+            continue
+        if lowered.startswith((
+            "accuracy source:",
+            "chapter marker:",
+            "default story language:",
+            "detected verse anchors:",
+            "do not copy",
+            "ocr language:",
+            "source:",
+            "story instruction:",
+            "use the mapped",
+            "verse markers detected:",
+        )):
+            continue
+        if is_mostly_devanagari(line):
+            continue
+        story_lines.append(line)
+
+    cleaned = "\n".join(story_lines).strip()
+    return cleaned or "Create an English Bhagavatham episode from the selected scripture reference using Tatparya Nirnaya as the accuracy source."
+
+
+def is_mostly_devanagari(text: str) -> bool:
+    letters = [char for char in text if char.isalpha()]
+    if not letters:
+        return False
+    devanagari = [char for char in letters if "\u0900" <= char <= "\u097f"]
+    return len(devanagari) / len(letters) > 0.35
 
 
 def create_beats(input_text: str, scene_count: int) -> list[str]:
@@ -187,6 +227,9 @@ Source references:
 
 Tatparya Nirnaya accuracy anchors:
 {chr(10).join(tatparya_contexts or []) if tatparya_contexts else "No Tatparya Nirnaya OCR reference mapped for this source yet."}
+
+Default language:
+Write all story-facing narration, image brief descriptions, and scene notes in English unless the user explicitly asks for Sanskrit.
 
 Scene beat:
 {beat}

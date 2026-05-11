@@ -16,7 +16,7 @@ def parse_source_ref(ref: str) -> tuple[int, int] | None:
     return int(match.group(1)), int(match.group(2))
 
 
-def tatparya_context_for_source_refs(db: Session, source_refs: list[str], max_chars: int = 700) -> list[str]:
+def tatparya_context_for_source_refs(db: Session, source_refs: list[str]) -> list[str]:
     contexts: list[str] = []
     seen: set[tuple[int, int]] = set()
 
@@ -33,9 +33,11 @@ def tatparya_context_for_source_refs(db: Session, source_refs: list[str], max_ch
         )
         if not reference:
             continue
-        excerpt = (reference.text_excerpt or "").strip()
-        if len(excerpt) > max_chars:
-            excerpt = excerpt[:max_chars].rstrip() + "..."
-        contexts.append(f"SB {canto}.{chapter}: {excerpt}")
+        markers = ", ".join((reference.verse_markers or [])[:24]) or "chapter-level reference"
+        contexts.append(
+            f"SB {canto}.{chapter}: Tatparya Nirnaya OCR is mapped for this chapter; "
+            f"use it as internal doctrinal grounding. Verse anchors: {markers}. "
+            "Keep public story and image-brief language in English."
+        )
 
     return contexts
