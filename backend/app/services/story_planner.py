@@ -112,7 +112,21 @@ def expand_short_plot(sentences: list[str], scene_count: int) -> list[str]:
 
 def classify_intensity(text: str) -> str:
     low = (text or "").lower()
-    if any(word in low for word in ["kill", "slay", "battle", "fight", "demon", "asura", "weapon", "attack"]):
+    if any(word in low for word in [
+        "attack",
+        "asura",
+        "battle",
+        "challenge",
+        "demon",
+        "divine victory",
+        "fight",
+        "kill",
+        "protects",
+        "slay",
+        "subdue",
+        "victory",
+        "weapon",
+    ]):
         return "divine_victory"
     if any(word in low for word in ["fear", "angry", "threat", "danger"]):
         return "tense"
