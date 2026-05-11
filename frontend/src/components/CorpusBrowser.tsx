@@ -49,6 +49,9 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
           <div className="panel-copy">
             Browse source references and episode summaries. Select entries to feed the planner with canonical refs, characters, location, and themes.
           </div>
+          <div className="planner-note">
+            This is a curated seed repository, not the full Bhagavatham corpus yet. Full shloka and translation ingestion is the next source-pipeline step after licensing/source selection.
+          </div>
         </div>
       </div>
       <div className="panel-body">
@@ -75,39 +78,44 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
         {loading ? (
           <div className="panel-copy">Loading repository...</div>
         ) : (
-          <div className="corpus-list">
-            {items.map((item) => {
-              const ref = `SB ${item.canto}.${item.chapter}.${item.verse}`;
-              return (
-                <article className="corpus-card" key={item.id}>
-                  <div className="corpus-top">
-                    <div>
-                      <div className="character-name">{ref}</div>
-                      <div className="panel-copy">{item.location}</div>
+          <>
+            <div className="repository-status">
+              Showing {items.length} curated source {items.length === 1 ? "entry" : "entries"}.
+            </div>
+            <div className="corpus-list">
+              {items.map((item) => {
+                const ref = `SB ${item.canto}.${item.chapter}.${item.verse}`;
+                return (
+                  <article className="corpus-card" key={item.id}>
+                    <div className="corpus-top">
+                      <div>
+                        <div className="character-name">{ref}</div>
+                        <div className="panel-copy">{item.location}</div>
+                      </div>
+                      <button
+                        className="button accent"
+                        onClick={() => onUseSource({ ref, text: sourceText(item) })}
+                      >
+                        Use
+                      </button>
                     </div>
-                    <button
-                      className="button accent"
-                      onClick={() => onUseSource({ ref, text: sourceText(item) })}
-                    >
-                      Use
-                    </button>
-                  </div>
-                  <p className="scene-text">{item.summary}</p>
-                  <div className="small-list">
-                    {item.characters.map((character) => (
-                      <span className="tag" key={character}>{character}</span>
-                    ))}
-                  </div>
-                  <div className="small-list">
-                    {item.themes.map((theme) => (
-                      <span className="tag" key={theme}>{theme}</span>
-                    ))}
-                  </div>
-                  <div className="license-note">{item.license}</div>
-                </article>
-              );
-            })}
-          </div>
+                    <p className="scene-text">{item.summary}</p>
+                    <div className="small-list">
+                      {item.characters.map((character) => (
+                        <span className="tag" key={character}>{character}</span>
+                      ))}
+                    </div>
+                    <div className="small-list">
+                      {item.themes.map((theme) => (
+                        <span className="tag" key={theme}>{theme}</span>
+                      ))}
+                    </div>
+                    <div className="license-note">{item.license}</div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </section>

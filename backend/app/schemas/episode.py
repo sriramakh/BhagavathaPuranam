@@ -6,6 +6,39 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class SceneCharacterAssetOut(BaseModel):
+    id: str
+    asset_type: str
+    provider: str
+    version: int
+    approved: bool
+    url: str
+
+
+class SceneCharacterBriefOut(BaseModel):
+    character_id: str
+    canonical_name: str
+    category: str
+    form_id: Optional[str] = None
+    form_name: str = ""
+    visual_profile: str = ""
+    cultural_rules: str = ""
+    negative_prompt: str = ""
+    reference_status: str
+    reference_assets: list[SceneCharacterAssetOut] = Field(default_factory=list)
+
+
+class SceneImageBriefOut(BaseModel):
+    source_refs: list[str] = Field(default_factory=list)
+    scene_description: str
+    background: str
+    intensity: str
+    characters: list[SceneCharacterBriefOut] = Field(default_factory=list)
+    previous_scene_context: list[str] = Field(default_factory=list)
+    reference_requirements: list[str] = Field(default_factory=list)
+    image_prompt: str
+
+
 class SceneOut(BaseModel):
     id: str
     episode_id: str
@@ -17,6 +50,7 @@ class SceneOut(BaseModel):
     intensity: str
     image_prompt: str
     status: str
+    image_brief: Optional[SceneImageBriefOut] = None
 
     model_config = {"from_attributes": True}
 
@@ -30,7 +64,7 @@ class EpisodeOut(BaseModel):
     status: str
     continuity_notes: str
     created_at: datetime
-    scenes: list[SceneOut] = []
+    scenes: list[SceneOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

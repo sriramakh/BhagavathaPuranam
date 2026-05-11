@@ -45,8 +45,42 @@ export interface ResolveResponse {
   possible_new_characters: string[];
 }
 
+export interface SceneCharacterAsset {
+  id: string;
+  asset_type: string;
+  provider: string;
+  version: number;
+  approved: boolean;
+  url: string;
+}
+
+export interface SceneCharacterBrief {
+  character_id: string;
+  canonical_name: string;
+  category: string;
+  form_id?: string | null;
+  form_name: string;
+  visual_profile: string;
+  cultural_rules: string;
+  negative_prompt: string;
+  reference_status: string;
+  reference_assets: SceneCharacterAsset[];
+}
+
+export interface SceneImageBrief {
+  source_refs: string[];
+  scene_description: string;
+  background: string;
+  intensity: string;
+  characters: SceneCharacterBrief[];
+  previous_scene_context: string[];
+  reference_requirements: string[];
+  image_prompt: string;
+}
+
 export interface EpisodeScene {
   id: string;
+  source_refs: string[];
   scene_number: number;
   narration: string;
   background: string;
@@ -54,6 +88,7 @@ export interface EpisodeScene {
   intensity: string;
   image_prompt: string;
   status: string;
+  image_brief?: SceneImageBrief | null;
 }
 
 export interface Episode {
@@ -128,6 +163,16 @@ export function createEpisodePlan(input_text: string, target_scene_count?: numbe
       source_refs,
       target_scene_count,
     }),
+  });
+}
+
+export function updateScene(
+  sceneId: string,
+  payload: Partial<Pick<EpisodeScene, "narration" | "background" | "character_ids" | "intensity" | "image_prompt" | "status">>,
+) {
+  return request<EpisodeScene>(`/api/v1/episodes/scenes/${sceneId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 }
 

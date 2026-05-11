@@ -1,8 +1,15 @@
 "use client";
 
-import { BookMarked, CircleCheck, ScanSearch, WandSparkles } from "lucide-react";
+import { BookMarked, CircleCheck, Image, Pencil, Save, ScanSearch, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { createEpisodePlan, Episode, resolveCharacters, ResolveResponse } from "@/lib/api";
+import {
+  createEpisodePlan,
+  Episode,
+  EpisodeScene,
+  resolveCharacters,
+  ResolveResponse,
+  updateScene,
+} from "@/lib/api";
 import type { SelectedSource } from "@/components/StudioWorkspace";
 
 const SAMPLE = "Krishna and Balarama enter Vrindavan with the cowherd boys. Mother Yashoda watches with love as Krishna plays his flute near the Yamuna. A demon appears and Krishna protects everyone with divine grace.";
@@ -20,6 +27,8 @@ export function EpisodePlanner({
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
+  const [draftScene, setDraftScene] = useState<Pick<EpisodeScene, "narration" | "background" | "intensity" | "image_prompt" | "status"> | null>(null);
 
   const sourceRefs = useMemo(() => selectedSources.map((source) => source.ref), [selectedSources]);
 
@@ -57,6 +66,44 @@ export function EpisodePlanner({
     }
   }
 
+  function startEdit(scene: EpisodeScene) {
+    setEditingSceneId(scene.id);
+    setDraftScene({
+      narration: scene.narration,
+      background: scene.background,
+      intensity: scene.intensity,
+      image_prompt: scene.image_prompt,
+      status: scene.status,
+    });
+  }
+
+  function cancelEdit() {
+    setEditingSceneId(null);
+    setDraftScene(null);
+  }
+
+  async function saveScene(sceneId: string) {
+    if (!draftScene || !episode) return;
+    setLoading(`scene-${sceneId}`);
+    setError(null);
+    try {
+      const saved = await updateScene(sceneId, draftScene);
+      setEpisode({
+        ...episode,
+        scenes: episode.scenes.map((scene) => (scene.id === sceneId ? saved : scene)),
+      });
+      cancelEdit();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Scene update failed");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  function updateDraft(field: keyof NonNullable<typeof draftScene>, value: string) {
+    setDraftScene((current) => (current ? { ...current, [field]: value } : current));
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -67,6 +114,9 @@ export function EpisodePlanner({
           </div>
           <div className="panel-copy">
             Start from a shloka group, episode summary, or custom plot. The engine resolves recurring characters before building editable scenes.
+          </div>
+          <div className="planner-note">
+            Scene plans are generated on the fly by the current deterministic draft planner, so instant output is expected. This is not a pregenerated story cache.
           </div>
         </div>
       </div>
@@ -147,13 +197,180 @@ export function EpisodePlanner({
                 .sort((a, b) => a.scene_number - b.scene_number)
                 .map((scene) => (
                   <article className="scene-card" key={scene.id}>
-                    <div className="scene-title">
-                      Scene {scene.scene_number} · {scene.intensity} · {scene.status}
+                    <div className="scene-card-header">
+                      <div className="scene-title">
+                        Scene {scene.scene_number} · {scene.intensity} · {scene.status}
+                      </div>
+                      {editingSceneId === scene.id ? (
+                        <div className="scene-actions">
+                          <button
+                            className="icon-button"
+                            aria-label={`Save scene ${scene.scene_number}`}
+                            title="Save scene"
+                            onClick={() => saveScene(scene.id)}
+                            disabled={loading === `scene-${scene.id}`}
+                          >
+                            <Save size={15} />
+                          </button>
+                          <button
+                            className="icon-button"
+                            aria-label={`Cancel editing scene ${scene.scene_number}`}
+                            title="Cancel"
+                            onClick={cancelEdit}
+                            disabled={loading === `scene-${scene.id}`}
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="icon-button"
+                          aria-label={`Edit scene ${scene.scene_number}`}
+                          title="Edit scene"
+                          onClick={() => startEdit(scene)}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
                     </div>
-                    <div className="scene-text">{scene.narration}</div>
-                    <div className="form-text">
-                      <strong>Background:</strong> {scene.background}
-                    </div>
+                    {editingSceneId === scene.id && draftScene ? (
+                      <div className="scene-editor">
+                        <div className="field">
+                          <label htmlFor={`scene-${scene.id}-narration`}>Narration</label>
+                          <textarea
+                            id={`scene-${scene.id}-narration`}
+                            className="textarea compact"
+                            value={draftScene.narration}
+                            onChange={(event) => updateDraft("narration", event.target.value)}
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`scene-${scene.id}-background`}>Background</label>
+                          <textarea
+                            id={`scene-${scene.id}-background`}
+                            className="textarea compact"
+                            value={draftScene.background}
+                            onChange={(event) => updateDraft("background", event.target.value)}
+                          />
+                        </div>
+                        <div className="scene-edit-grid">
+                          <div className="field">
+                            <label htmlFor={`scene-${scene.id}-intensity`}>Intensity</label>
+                            <select
+                              id={`scene-${scene.id}-intensity`}
+                              className="select"
+                              value={draftScene.intensity}
+                              onChange={(event) => updateDraft("intensity", event.target.value)}
+                            >
+                              <option value="peaceful">peaceful</option>
+                              <option value="tense">tense</option>
+                              <option value="divine_victory">divine_victory</option>
+                            </select>
+                          </div>
+                          <div className="field">
+                            <label htmlFor={`scene-${scene.id}-status`}>Status</label>
+                            <select
+                              id={`scene-${scene.id}-status`}
+                              className="select"
+                              value={draftScene.status}
+                              onChange={(event) => updateDraft("status", event.target.value)}
+                            >
+                              <option value="draft">draft</option>
+                              <option value="approved">approved</option>
+                              <option value="needs_revision">needs_revision</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`scene-${scene.id}-prompt`}>Image prompt / visual direction</label>
+                          <textarea
+                            id={`scene-${scene.id}-prompt`}
+                            className="textarea compact"
+                            value={draftScene.image_prompt}
+                            onChange={(event) => updateDraft("image_prompt", event.target.value)}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="scene-text">{scene.narration}</div>
+                        <div className="form-text">
+                          <strong>Background:</strong> {scene.background}
+                        </div>
+                      </>
+                    )}
+                    {scene.image_brief && (
+                      <details className="image-brief">
+                        <summary>
+                          <Image size={15} />
+                          Scene image brief
+                        </summary>
+                        <div className="brief-block">
+                          <div className="brief-label">Scene description</div>
+                          <div className="scene-text">{scene.image_brief.scene_description}</div>
+                        </div>
+                        <div className="brief-block">
+                          <div className="brief-label">Source references</div>
+                          <div className="small-list">
+                            {(scene.image_brief.source_refs.length ? scene.image_brief.source_refs : scene.source_refs).map((ref) => (
+                              <span className="tag" key={ref}>{ref}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="brief-block">
+                          <div className="brief-label">Characters and references</div>
+                          <div className="brief-character-list">
+                            {scene.image_brief.characters.map((character) => (
+                              <div className="brief-character" key={character.character_id}>
+                                <div className="character-name">{character.canonical_name}</div>
+                                <div className="form-text">
+                                  {character.form_name || "Default form"} · {character.reference_status.replaceAll("_", " ")}
+                                </div>
+                                <div className="form-text">{character.visual_profile}</div>
+                                {character.cultural_rules && (
+                                  <div className="form-text">
+                                    <strong>Cultural rules:</strong> {character.cultural_rules}
+                                  </div>
+                                )}
+                                <div className="small-list">
+                                  {character.reference_assets.length > 0 ? (
+                                    character.reference_assets.map((asset) => (
+                                      <span className="tag" key={asset.id}>
+                                        approved {asset.asset_type} v{asset.version}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="tag">no approved image yet</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="brief-block">
+                          <div className="brief-label">Continuity context</div>
+                          {scene.image_brief.previous_scene_context.length > 0 ? (
+                            scene.image_brief.previous_scene_context.map((context) => (
+                              <div className="form-text" key={context}>{context}</div>
+                            ))
+                          ) : (
+                            <div className="form-text">First scene in this episode; use approved character references and source refs as the anchor.</div>
+                          )}
+                        </div>
+                        <div className="brief-block">
+                          <div className="brief-label">Generation requirements</div>
+                          <div className="brief-requirements">
+                            {scene.image_brief.reference_requirements.map((requirement) => (
+                              <span className="tag" key={requirement}>{requirement}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="brief-block">
+                          <div className="brief-label">Full image prompt</div>
+                          <div className="prompt-box">{scene.image_brief.image_prompt}</div>
+                        </div>
+                      </details>
+                    )}
                   </article>
                 ))}
             </div>

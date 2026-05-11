@@ -138,6 +138,16 @@ button {
   line-height: 1.5;
 }
 
+.planner-note {
+  margin-top: 10px;
+  border-left: 3px solid var(--saffron);
+  color: var(--muted);
+  background: #fff8ed;
+  padding: 9px 11px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .panel-body {
   padding: 18px;
 }
@@ -216,6 +226,10 @@ button {
   line-height: 1.5;
 }
 
+.textarea.compact {
+  min-height: 82px;
+}
+
 .character-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -226,6 +240,13 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 12px;
+}
+
+.repository-status {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 12px;
 }
 
 .corpus-card {
@@ -323,6 +344,35 @@ button {
   padding: 13px;
 }
 
+.scene-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.scene-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 8px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+}
+
+.icon-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .scene-title {
   font-size: 13px;
   color: var(--muted);
@@ -333,6 +383,74 @@ button {
 .scene-text {
   line-height: 1.45;
   font-size: 14px;
+}
+
+.scene-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.scene-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.image-brief {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.image-brief summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sky);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.brief-block {
+  margin-top: 12px;
+}
+
+.brief-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.brief-character-list {
+  display: grid;
+  gap: 8px;
+}
+
+.brief-character {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.brief-requirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.prompt-box {
+  border: 1px solid var(--line);
+  background: #fffdf7;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 10px;
+  white-space: pre-wrap;
 }
 
 .error {
@@ -350,6 +468,10 @@ button {
   }
 
   .search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .scene-edit-grid {
     grid-template-columns: 1fr;
   }
 }
