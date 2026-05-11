@@ -34,7 +34,7 @@ export function EpisodePlanner({
 
   useEffect(() => {
     if (selectedSources.length === 0) return;
-    setText(selectedSources.map((source) => source.text).join("\n\n"));
+    setText(selectedSources.map(sourceToStoryDirection).join("\n\n"));
   }, [selectedSources]);
 
   async function handleResolve() {
@@ -113,7 +113,7 @@ export function EpisodePlanner({
             Episode Planner
           </div>
           <div className="panel-copy">
-            Start from a shloka group, episode summary, or custom plot. The engine resolves recurring characters before building editable scenes.
+            Start from a scripture reference or a custom plot. Story text is drafted in English; Tatparya references stay attached as accuracy context.
           </div>
           <div className="planner-note">
             Scene plans are generated on the fly by the current deterministic draft planner, so instant output is expected. This is not a pregenerated story cache.
@@ -122,7 +122,7 @@ export function EpisodePlanner({
       </div>
       <div className="panel-body">
         <div className="field">
-          <label htmlFor="plot">Source shloka summary or plot input</label>
+          <label htmlFor="plot">Story direction (English default)</label>
           <textarea
             id="plot"
             className="textarea"
@@ -379,4 +379,17 @@ export function EpisodePlanner({
       </div>
     </section>
   );
+}
+
+function sourceToStoryDirection(source: SelectedSource): string {
+  const premise = source.text
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.toLowerCase().startsWith("story premise:"));
+
+  if (premise) {
+    return premise.split(":", 2)[1]?.trim() || premise;
+  }
+
+  return `Create an English Bhagavatham episode from ${source.ref}.`;
 }

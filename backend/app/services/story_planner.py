@@ -21,7 +21,7 @@ def create_episode_plan(
     story_input = prepare_story_input(input_text)
     matches, unknown = resolve_characters(db, story_input)
     character_ids = [m.character.id for m in matches]
-    title = title_from_input(story_input, fallback="Bhagavatham Episode")
+    title = title_from_refs(source_refs) or title_from_input(story_input, fallback="Bhagavatham Episode")
     tatparya_contexts = tatparya_context_for_source_refs(db, source_refs or [])
 
     episode = Episode(
@@ -80,6 +80,15 @@ def suggest_scene_count(input_text: str) -> int:
     if length < 700:
         return 8
     return 10
+
+
+def title_from_refs(source_refs: Optional[list[str]]) -> str | None:
+    refs = [ref for ref in (source_refs or []) if ref]
+    if not refs:
+        return None
+    visible_refs = ", ".join(refs[:3])
+    suffix = "..." if len(refs) > 3 else ""
+    return f"Bhagavatham Episode: {visible_refs}{suffix}"
 
 
 def prepare_story_input(input_text: str) -> str:
