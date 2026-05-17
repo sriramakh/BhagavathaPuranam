@@ -181,7 +181,7 @@ export function EpisodePlanner({
             Start from a scripture reference or a custom plot. Story text is drafted in English; Tatparya references stay attached as accuracy context.
           </div>
           <div className="planner-note">
-            Scene plans are generated on the fly by the current deterministic draft planner, so instant output is expected. This is not a pregenerated story cache.
+            Scene plans are generated on the fly. Grok is the production story engine; the fast deterministic draft is available for offline fallback and testing.
           </div>
         </div>
       </div>
