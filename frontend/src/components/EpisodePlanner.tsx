@@ -3,11 +3,14 @@
 import { BookMarked, CircleCheck, Image, Pencil, Save, ScanSearch, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  batchUpdateScenes,
   createEpisodePlan,
   Episode,
   EpisodeScene,
+  listEpisodes,
   resolveCharacters,
   ResolveResponse,
+  updateEpisodeStatus,
   updateScene,
 } from "@/lib/api";
 import type { SelectedSource } from "@/components/StudioWorkspace";
@@ -25,9 +28,13 @@ export function EpisodePlanner({
   const [sceneCount, setSceneCount] = useState(8);
   const [resolveResult, setResolveResult] = useState<ResolveResponse | null>(null);
   const [episode, setEpisode] = useState<Episode | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
+  const [selectedSceneIds, setSelectedSceneIds] = useState<string[]>([]);
+  const [batchInstruction, setBatchInstruction] = useState("");
+  const [generationMode, setGenerationMode] = useState("grok");
   const [draftScene, setDraftScene] = useState<Pick<EpisodeScene, "narration" | "background" | "intensity" | "image_prompt" | "status"> | null>(null);
 
   const sourceRefs = useMemo(() => selectedSources.map((source) => source.ref), [selectedSources]);
@@ -36,6 +43,18 @@ export function EpisodePlanner({
     if (selectedSources.length === 0) return;
     setText(selectedSources.map(sourceToStoryDirection).join("\n\n"));
   }, [selectedSources]);
+
+  useEffect(() => {
+    refreshEpisodes();
+  }, []);
+
+  async function refreshEpisodes() {
+    try {
+      setEpisodes(await listEpisodes());
+    } catch {
+      // Episode history is helpful, but it should not block planning.
+    }
+  }
 
   async function handleResolve() {
     setLoading("resolve");
@@ -53,12 +72,14 @@ export function EpisodePlanner({
     setLoading("plan");
     setError(null);
     try {
-      const next = await createEpisodePlan(text, sceneCount, sourceRefs);
+      const next = await createEpisodePlan(text, sceneCount, sourceRefs, generationMode);
       setEpisode(next);
+      setSelectedSceneIds([]);
       setResolveResult({
         matches: [],
         possible_new_characters: [],
       });
+      await refreshEpisodes();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Planning failed");
     } finally {
@@ -98,6 +119,50 @@ export function EpisodePlanner({
     } finally {
       setLoading(null);
     }
+  }
+
+  async function saveBatch() {
+    if (!episode || selectedSceneIds.length === 0) return;
+    setLoading("batch");
+    setError(null);
+    try {
+      const savedScenes = await batchUpdateScenes({
+        scene_ids: selectedSceneIds,
+        narration_instruction: batchInstruction || undefined,
+        status: "needs_revision",
+      });
+      const byId = new Map(savedScenes.map((scene) => [scene.id, scene]));
+      setEpisode({
+        ...episode,
+        scenes: episode.scenes.map((scene) => byId.get(scene.id) || scene),
+      });
+      setBatchInstruction("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Batch update failed");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function setEpisodeStatus(status: string) {
+    if (!episode) return;
+    setLoading("episode-status");
+    setError(null);
+    try {
+      const saved = await updateEpisodeStatus(episode.id, status);
+      setEpisode(saved);
+      await refreshEpisodes();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Episode status update failed");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  function toggleScene(sceneId: string) {
+    setSelectedSceneIds((current) =>
+      current.includes(sceneId) ? current.filter((id) => id !== sceneId) : [...current, sceneId],
+    );
   }
 
   function updateDraft(field: keyof NonNullable<typeof draftScene>, value: string) {
@@ -145,16 +210,27 @@ export function EpisodePlanner({
         )}
         <div className="field">
           <label htmlFor="scene-count">Target scenes</label>
-          <select
-            id="scene-count"
-            className="select"
-            value={sceneCount}
-            onChange={(event) => setSceneCount(Number(event.target.value))}
-          >
-            {[6, 8, 10, 12, 16].map((value) => (
-              <option value={value} key={value}>{value} scenes</option>
-            ))}
-          </select>
+          <div className="planner-controls-grid">
+            <select
+              id="scene-count"
+              className="select"
+              value={sceneCount}
+              onChange={(event) => setSceneCount(Number(event.target.value))}
+            >
+              {[6, 8, 10, 12, 16].map((value) => (
+                <option value={value} key={value}>{value} scenes</option>
+              ))}
+            </select>
+            <select
+              className="select"
+              value={generationMode}
+              onChange={(event) => setGenerationMode(event.target.value)}
+              aria-label="Generation engine"
+            >
+              <option value="grok">Grok story engine</option>
+              <option value="draft">Fast deterministic draft</option>
+            </select>
+          </div>
         </div>
 
         <div className="toolbar">
@@ -187,10 +263,54 @@ export function EpisodePlanner({
           </div>
         )}
 
+        {episodes.length > 0 && (
+          <div className="episode-library">
+            <div className="scene-title">Episode library</div>
+            <div className="episode-library-list">
+              {episodes.slice(0, 8).map((item) => (
+                <button className="episode-row" key={item.id} type="button" onClick={() => setEpisode(item)}>
+                  <span>{item.title}</span>
+                  <small>{item.status} · {item.scenes.length} scenes</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {episode && (
           <div style={{ marginTop: 18 }}>
-            <div className="panel-title" style={{ fontSize: 16 }}>{episode.title}</div>
-            <div className="panel-copy">{episode.continuity_notes}</div>
+            <div className="episode-heading">
+              <div>
+                <div className="panel-title" style={{ fontSize: 16 }}>{episode.title}</div>
+                <div className="panel-copy">{episode.continuity_notes}</div>
+              </div>
+              <select
+                className="select compact-select"
+                value={episode.status}
+                onChange={(event) => setEpisodeStatus(event.target.value)}
+                disabled={!!loading}
+                aria-label="Episode status"
+              >
+                <option value="draft">draft</option>
+                <option value="in_review">in review</option>
+                <option value="approved">approved</option>
+                <option value="archived">archived</option>
+              </select>
+            </div>
+            <div className="batch-editor">
+              <div className="scene-title">{selectedSceneIds.length} selected for group edit</div>
+              <div className="batch-editor-row">
+                <input
+                  className="input"
+                  placeholder="Revision direction for selected scenes..."
+                  value={batchInstruction}
+                  onChange={(event) => setBatchInstruction(event.target.value)}
+                />
+                <button className="button" type="button" onClick={saveBatch} disabled={loading === "batch" || selectedSceneIds.length === 0}>
+                  Apply to Selected
+                </button>
+              </div>
+            </div>
             <div className="scene-list" style={{ marginTop: 12 }}>
               {episode.scenes
                 .slice()
@@ -198,8 +318,14 @@ export function EpisodePlanner({
                 .map((scene) => (
                   <article className="scene-card" key={scene.id}>
                     <div className="scene-card-header">
-                      <div className="scene-title">
-                        Scene {scene.scene_number} · {scene.intensity} · {scene.status}
+                      <div className="scene-title scene-select-title">
+                        <input
+                          type="checkbox"
+                          checked={selectedSceneIds.includes(scene.id)}
+                          onChange={() => toggleScene(scene.id)}
+                          aria-label={`Select scene ${scene.scene_number}`}
+                        />
+                        <span>Scene {scene.scene_number} · {scene.intensity} · {scene.status}</span>
                       </div>
                       {editingSceneId === scene.id ? (
                         <div className="scene-actions">

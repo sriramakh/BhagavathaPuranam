@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session, selectinload
 from app.db.session import get_db
 from app.models.character import CharacterIdentity, CharacterForm
 from app.models.episode import Episode, EpisodeScene
-from app.schemas.episode import EpisodeOut, SceneOut, EpisodePlanCreate, SceneUpdate
+from app.schemas.episode import (
+    EpisodeOut,
+    EpisodePlanCreate,
+    EpisodeStatusUpdate,
+    SceneBatchUpdate,
+    SceneOut,
+    SceneUpdate,
+)
 from app.services.story_planner import create_episode_plan
 
 router = APIRouter(prefix="/api/v1/episodes", tags=["episodes"])
@@ -167,6 +174,7 @@ def plan_episode(payload: EpisodePlanCreate, db: Session = Depends(get_db)):
         source_mode=payload.source_mode,
         source_refs=payload.source_refs,
         target_scene_count=payload.target_scene_count,
+        generation_mode=payload.generation_mode,
     )
     return episode_to_response(db, episode)
 
@@ -184,6 +192,51 @@ def get_episode(episode_id: str, db: Session = Depends(get_db)):
     return episode_to_response(db, episode)
 
 
+@router.patch("/{episode_id}/status", response_model=EpisodeOut)
+def update_episode_status(episode_id: str, payload: EpisodeStatusUpdate, db: Session = Depends(get_db)):
+    episode = (
+        db.query(Episode)
+        .options(selectinload(Episode.scenes))
+        .filter(Episode.id == episode_id)
+        .first()
+    )
+    if not episode:
+        raise HTTPException(404, "Episode not found")
+    if payload.status not in {"draft", "in_review", "approved", "archived"}:
+        raise HTTPException(422, "Unsupported episode status")
+    episode.status = payload.status
+    db.commit()
+    db.refresh(episode)
+    return episode_to_response(db, episode)
+
+
+@router.patch("/scenes/batch", response_model=list[SceneOut])
+def batch_update_scenes(payload: SceneBatchUpdate, db: Session = Depends(get_db)):
+    scenes = (
+        db.query(EpisodeScene)
+        .filter(EpisodeScene.id.in_(payload.scene_ids))
+        .order_by(EpisodeScene.scene_number)
+        .all()
+    )
+    if len(scenes) != len(set(payload.scene_ids)):
+        raise HTTPException(404, "One or more scenes were not found")
+
+    for scene in scenes:
+        if payload.status:
+            scene.status = payload.status
+        if payload.intensity:
+            scene.intensity = payload.intensity
+        if payload.narration_instruction:
+            scene.narration = append_revision_note(scene.narration, payload.narration_instruction)
+        if payload.background_instruction:
+            scene.background = append_revision_note(scene.background, payload.background_instruction)
+
+    db.commit()
+    for scene in scenes:
+        db.refresh(scene)
+    return [scene_to_response(db, scene) for scene in scenes]
+
+
 @router.patch("/scenes/{scene_id}", response_model=SceneOut)
 def update_scene(scene_id: str, payload: SceneUpdate, db: Session = Depends(get_db)):
     scene = db.get(EpisodeScene, scene_id)
@@ -194,3 +247,10 @@ def update_scene(scene_id: str, payload: SceneUpdate, db: Session = Depends(get_
     db.commit()
     db.refresh(scene)
     return scene_to_response(db, scene)
+
+
+def append_revision_note(value: str, instruction: str) -> str:
+    note = instruction.strip()
+    if not note:
+        return value
+    return f"{value.rstrip()}\n\nRevision direction: {note}"

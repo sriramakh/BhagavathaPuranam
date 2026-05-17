@@ -4,8 +4,10 @@ import { BookOpenText, CheckCircle2, Library, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   getTatparyaStats,
+  getShlokaStats,
   listShlokas,
   listTatparyaReferences,
+  ShlokaStats,
   Shloka,
   TatparyaReference,
   TatparyaStats,
@@ -20,6 +22,7 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
   const [items, setItems] = useState<Shloka[]>([]);
   const [tatparyaItems, setTatparyaItems] = useState<TatparyaReference[]>([]);
   const [tatparyaStats, setTatparyaStats] = useState<TatparyaStats | null>(null);
+  const [shlokaStats, setShlokaStats] = useState<ShlokaStats | null>(null);
   const [canto, setCanto] = useState<number | "all">("all");
   const [selectedTatparyaId, setSelectedTatparyaId] = useState<string | null>(null);
   const [selectedSeedId, setSelectedSeedId] = useState<string | null>(null);
@@ -42,8 +45,12 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
         setTatparyaStats(stats);
         setSelectedTatparyaId((current) => (current && refs.some((item) => item.id === current) ? current : refs[0]?.id ?? null));
       } else {
-        const seeds = await listShlokas({ q: nextQuery || undefined });
+        const [seeds, stats] = await Promise.all([
+          listShlokas({ q: nextQuery || undefined }),
+          getShlokaStats(),
+        ]);
         setItems(seeds);
+        setShlokaStats(stats);
         setSelectedSeedId((current) => (current && seeds.some((item) => item.id === current) ? current : seeds[0]?.id ?? null));
       }
     } catch (err) {
@@ -65,7 +72,8 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
       `Characters: ${item.characters.join(", ")}`,
       `Themes: ${item.themes.join(", ")}`,
       `Summary: ${item.summary}`,
-    ].join("\n");
+      item.translation ? `English translation: ${item.translation}` : "",
+    ].filter(Boolean).join("\n");
   }
 
   function tatparyaSourceText(item: TatparyaReference) {
@@ -96,6 +104,7 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
   }
 
   const totalTatparya = tatparyaStats?.total_references ?? tatparyaItems.length;
+  const totalShlokas = shlokaStats?.total_verses ?? items.length;
   const shownCount = mode === "tatparya" ? tatparyaItems.length : items.length;
   const selectedTatparya = useMemo(
     () => tatparyaItems.find((item) => item.id === selectedTatparyaId) ?? tatparyaItems[0] ?? null,
@@ -143,7 +152,7 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
               >
                 <BookOpenText size={15} />
                 Seeds
-                <span>{items.length || 7}</span>
+                <span>{totalShlokas || 7}</span>
               </button>
             </div>
 
@@ -184,7 +193,7 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
             <div className="repository-status">
               {mode === "tatparya"
                 ? `${shownCount} of ${totalTatparya} Tatparya references`
-                : `${shownCount} curated story seeds`}
+                : `${shownCount} of ${totalShlokas} English verse records`}
             </div>
           </div>
 
@@ -294,6 +303,12 @@ export function CorpusBrowser({ onUseSource }: { onUseSource: (source: SelectedS
                     <div className="detail-kicker">Curated story seed</div>
                     <div className="detail-title">SB {selectedSeed.canto}.{selectedSeed.chapter}.{selectedSeed.verse}</div>
                     <p className="detail-copy">{selectedSeed.summary}</p>
+                    {selectedSeed.translation && (
+                      <details className="source-technical">
+                        <summary>English translation</summary>
+                        <div>{selectedSeed.translation}</div>
+                      </details>
+                    )}
                     <div className="small-list">
                       {selectedSeed.characters.map((character) => (
                         <span className="tag" key={character}>{character}</span>

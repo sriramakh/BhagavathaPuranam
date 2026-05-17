@@ -1,14 +1,25 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.models.episode import Episode, EpisodeScene
 from app.services.character_memory import resolve_characters
+from app.services.grok_story import generate_story_scenes
+from app.services.source_context import build_source_context
 from app.services.style_bible import scene_prompt_base
 from app.services.tatparya_lookup import tatparya_context_for_source_refs
 from app.services.text import split_sentences, title_from_input
+
+
+@dataclass
+class PlannedBeat:
+    narration: str
+    background: str
+    intensity: str
 
 
 def create_episode_plan(
@@ -17,12 +28,25 @@ def create_episode_plan(
     source_mode: str = "plot",
     source_refs: Optional[list[str]] = None,
     target_scene_count: Optional[int] = None,
+    generation_mode: str = "grok",
 ) -> Episode:
     story_input = prepare_story_input(input_text)
     matches, unknown = resolve_characters(db, story_input)
     character_ids = [m.character.id for m in matches]
-    title = title_from_refs(source_refs) or title_from_input(story_input, fallback="Bhagavatham Episode")
+    source_context = build_source_context(db, source_refs or [])
+    title = source_context.title if source_refs else title_from_input(story_input, fallback="Bhagavatham Episode")
     tatparya_contexts = tatparya_context_for_source_refs(db, source_refs or [])
+    source_summaries = source_context.seed_summaries
+    scene_count = target_scene_count or suggest_scene_count(story_input)
+    planned_beats, engine_note = plan_scene_beats(
+        story_input=story_input,
+        scene_count=scene_count,
+        source_refs=source_refs or [],
+        source_contexts=source_summaries,
+        tatparya_contexts=tatparya_contexts,
+        known_characters=[m.character.canonical_name for m in matches],
+        generation_mode=generation_mode,
+    )
 
     episode = Episode(
         title=title,
@@ -38,26 +62,25 @@ def create_episode_plan(
                 if tatparya_contexts
                 else ""
             )
+            + f" Planning engine: {engine_note}."
         ),
     )
     db.add(episode)
     db.flush()
 
-    scene_count = target_scene_count or suggest_scene_count(story_input)
-    beats = create_beats(story_input, scene_count)
-    for index, beat in enumerate(beats, start=1):
-        intensity = classify_intensity(beat)
-        background = suggest_background(beat)
+    for index, beat in enumerate(planned_beats, start=1):
+        intensity = beat.intensity or classify_intensity(beat.narration)
+        background = beat.background or suggest_background(beat.narration)
         scene = EpisodeScene(
             episode_id=episode.id,
             scene_number=index,
             source_refs=source_refs or [],
-            narration=beat,
+            narration=beat.narration,
             background=background,
             character_ids=character_ids,
             intensity=intensity,
             image_prompt=build_scene_prompt(
-                beat,
+                beat.narration,
                 background,
                 matches,
                 intensity,
@@ -89,6 +112,70 @@ def title_from_refs(source_refs: Optional[list[str]]) -> str | None:
     visible_refs = ", ".join(refs[:3])
     suffix = "..." if len(refs) > 3 else ""
     return f"Bhagavatham Episode: {visible_refs}{suffix}"
+
+
+def plan_scene_beats(
+    story_input: str,
+    scene_count: int,
+    source_refs: list[str],
+    source_contexts: list[str],
+    tatparya_contexts: list[str],
+    known_characters: list[str],
+    generation_mode: str = "grok",
+) -> tuple[list[PlannedBeat], str]:
+    settings = get_settings()
+    requested_grok = generation_mode == "grok" and settings.story_generation_provider == "grok"
+    if requested_grok:
+        try:
+            scenes = generate_story_scenes(
+                story_input=story_input,
+                scene_count=scene_count,
+                source_refs=source_refs,
+                source_contexts=source_contexts,
+                tatparya_contexts=tatparya_contexts,
+                known_characters=known_characters,
+            )
+            planned = [
+                PlannedBeat(
+                    narration=ensure_opening_or_resolution(scene.narration, index, len(scenes)),
+                    background=scene.background,
+                    intensity=scene.intensity,
+                )
+                for index, scene in enumerate(scenes[:scene_count], start=1)
+            ]
+            return normalize_scene_count(planned, scene_count), "grok story planner"
+        except Exception:
+            fallback = deterministic_beats(story_input, scene_count)
+            return fallback, "deterministic fallback after Grok planner issue"
+
+    return deterministic_beats(story_input, scene_count), "deterministic draft planner"
+
+
+def deterministic_beats(input_text: str, scene_count: int) -> list[PlannedBeat]:
+    return [
+        PlannedBeat(
+            narration=beat,
+            background=suggest_background(beat),
+            intensity=classify_intensity(beat),
+        )
+        for beat in create_beats(input_text, scene_count)
+    ]
+
+
+def normalize_scene_count(beats: list[PlannedBeat], scene_count: int) -> list[PlannedBeat]:
+    if len(beats) >= scene_count:
+        return beats[:scene_count]
+    fallback = deterministic_beats("\n".join(beat.narration for beat in beats), scene_count)
+    return (beats + fallback[len(beats):])[:scene_count]
+
+
+def ensure_opening_or_resolution(text: str, index: int, total: int) -> str:
+    lowered = text.lower()
+    if index == 1 and "opens" not in lowered:
+        return f"The episode opens with sacred focus and devotional atmosphere. {text}"
+    if index == total and not any(word in lowered for word in ["closes", "resolves", "restored", "gratitude", "grace"]):
+        return f"The episode resolves with bhakti, protection, and grace. {text}"
+    return text
 
 
 def prepare_story_input(input_text: str) -> str:

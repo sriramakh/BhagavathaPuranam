@@ -102,6 +102,17 @@ export interface Episode {
   scenes: EpisodeScene[];
 }
 
+export interface SourceContext {
+  source_refs: string[];
+  title: string;
+  story_direction: string;
+  available_seed_count: number;
+  tatparya_reference_count: number;
+  seed_summaries: string[];
+  tatparya_anchors: string[];
+  coverage_notes: string[];
+}
+
 export interface Shloka {
   id: string;
   canto: number;
@@ -141,6 +152,12 @@ export interface TatparyaStats {
   source_name: string;
 }
 
+export interface ShlokaStats {
+  total_verses: number;
+  by_canto: Record<string, number>;
+  source_name: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -160,6 +177,36 @@ export function listCharacters() {
   return request<Character[]>("/api/v1/characters");
 }
 
+export function createCharacter(payload: {
+  canonical_name: string;
+  category: string;
+  description: string;
+  aliases: string[];
+  form_name: string;
+  age_stage: string;
+  visual_profile: string;
+  cultural_rules: string;
+  negative_prompt: string;
+}) {
+  return request<Character>("/api/v1/characters", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function addCharacterFeedback(payload: {
+  character_id: string;
+  form_id?: string | null;
+  asset_id?: string | null;
+  feedback_type: string;
+  note: string;
+}) {
+  return request<{ id: string; note: string; action_taken: string }>("/api/v1/characters/feedback", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function resolveCharacters(text: string) {
   return request<ResolveResponse>("/api/v1/characters/resolve", {
     method: "POST",
@@ -176,6 +223,10 @@ export function listShlokas(params: { q?: string; canto?: number; chapter?: numb
   return request<Shloka[]>(`/api/v1/corpus/shlokas${query ? `?${query}` : ""}`);
 }
 
+export function getShlokaStats() {
+  return request<ShlokaStats>("/api/v1/corpus/shlokas/stats");
+}
+
 export function listTatparyaReferences(params: { q?: string; canto?: number; chapter?: number } = {}) {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
@@ -189,7 +240,11 @@ export function getTatparyaStats() {
   return request<TatparyaStats>("/api/v1/corpus/tatparya/stats");
 }
 
-export function createEpisodePlan(input_text: string, target_scene_count?: number, source_refs: string[] = []) {
+export function listEpisodes() {
+  return request<Episode[]>("/api/v1/episodes");
+}
+
+export function createEpisodePlan(input_text: string, target_scene_count?: number, source_refs: string[] = [], generation_mode = "grok") {
   return request<Episode>("/api/v1/episodes/plan", {
     method: "POST",
     body: JSON.stringify({
@@ -197,8 +252,22 @@ export function createEpisodePlan(input_text: string, target_scene_count?: numbe
       source_mode: "plot",
       source_refs,
       target_scene_count,
+      generation_mode,
     }),
   });
+}
+
+export function updateEpisodeStatus(episodeId: string, status: string) {
+  return request<Episode>(`/api/v1/episodes/${episodeId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function getSourceContext(refs: string[]) {
+  const search = new URLSearchParams();
+  refs.forEach((ref) => search.append("refs", ref));
+  return request<SourceContext>(`/api/v1/corpus/context?${search.toString()}`);
 }
 
 export function updateScene(
@@ -206,6 +275,19 @@ export function updateScene(
   payload: Partial<Pick<EpisodeScene, "narration" | "background" | "character_ids" | "intensity" | "image_prompt" | "status">>,
 ) {
   return request<EpisodeScene>(`/api/v1/episodes/scenes/${sceneId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function batchUpdateScenes(payload: {
+  scene_ids: string[];
+  narration_instruction?: string;
+  background_instruction?: string;
+  status?: string;
+  intensity?: string;
+}) {
+  return request<EpisodeScene[]>("/api/v1/episodes/scenes/batch", {
     method: "PATCH",
     body: JSON.stringify(payload),
   });

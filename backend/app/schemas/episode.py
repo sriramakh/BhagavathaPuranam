@@ -74,6 +74,7 @@ class EpisodePlanCreate(BaseModel):
     source_mode: str = "plot"
     source_refs: list[str] = []
     target_scene_count: Optional[int] = Field(default=None, ge=3, le=24)
+    generation_mode: str = "grok"
 
 
 class SceneUpdate(BaseModel):
@@ -83,3 +84,15 @@ class SceneUpdate(BaseModel):
     intensity: Optional[str] = None
     image_prompt: Optional[str] = None
     status: Optional[str] = None
+
+
+class SceneBatchUpdate(BaseModel):
+    scene_ids: list[str] = Field(min_length=1)
+    narration_instruction: Optional[str] = None
+    background_instruction: Optional[str] = None
+    status: Optional[str] = None
+    intensity: Optional[str] = None
+
+
+class EpisodeStatusUpdate(BaseModel):
+    status: str

@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.corpus import CorpusShloka, TatparyaReference
-from app.schemas.corpus import ShlokaOut, TatparyaReferenceOut, TatparyaStatsOut
+from app.schemas.corpus import ShlokaOut, ShlokaStatsOut, SourceContextOut, TatparyaReferenceOut, TatparyaStatsOut
+from app.services.source_context import build_source_context
 
 router = APIRouter(prefix="/api/v1/corpus", tags=["corpus"])
 
@@ -33,6 +34,22 @@ def list_shlokas(
             | CorpusShloka.sanskrit.ilike(like)
         )
     return query.order_by(CorpusShloka.canto, CorpusShloka.chapter, CorpusShloka.verse).limit(100).all()
+
+
+@router.get("/shlokas/stats", response_model=ShlokaStatsOut)
+def shloka_stats(db: Session = Depends(get_db)):
+    rows = (
+        db.query(CorpusShloka.canto, func.count(CorpusShloka.id))
+        .group_by(CorpusShloka.canto)
+        .order_by(CorpusShloka.canto)
+        .all()
+    )
+    by_canto = {canto: count for canto, count in rows}
+    return {
+        "total_verses": sum(by_canto.values()),
+        "by_canto": by_canto,
+        "source_name": "Bhagavatham English translation repository",
+    }
 
 
 @router.get("/tatparya", response_model=list[TatparyaReferenceOut])
@@ -69,6 +86,24 @@ def tatparya_stats(db: Session = Depends(get_db)):
         "total_references": sum(by_canto.values()),
         "by_canto": by_canto,
         "source_name": "Sri Bhagavata Tatparya Nirnaya",
+    }
+
+
+@router.get("/context", response_model=SourceContextOut)
+def source_context(
+    refs: list[str] = Query(default=[]),
+    db: Session = Depends(get_db),
+):
+    context = build_source_context(db, refs)
+    return {
+        "source_refs": context.source_refs,
+        "title": context.title,
+        "story_direction": context.story_direction,
+        "available_seed_count": len(context.seed_summaries),
+        "tatparya_reference_count": len(context.tatparya_anchors),
+        "seed_summaries": context.seed_summaries,
+        "tatparya_anchors": context.tatparya_anchors,
+        "coverage_notes": context.coverage_notes,
     }
 
 

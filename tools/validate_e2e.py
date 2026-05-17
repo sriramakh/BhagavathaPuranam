@@ -253,6 +253,7 @@ def validate_case(client: Client, char_by_name: dict[str, str], case: Case) -> l
             "source_mode": "plot",
             "source_refs": case.source_refs,
             "target_scene_count": case.scene_count,
+            "generation_mode": "draft",
         },
     )
 

@@ -44,3 +44,20 @@ class TatparyaStatsOut(BaseModel):
     total_references: int
     by_canto: dict[int, int]
     source_name: str
+
+
+class ShlokaStatsOut(BaseModel):
+    total_verses: int
+    by_canto: dict[int, int]
+    source_name: str
+
+
+class SourceContextOut(BaseModel):
+    source_refs: list[str]
+    title: str
+    story_direction: str
+    available_seed_count: int
+    tatparya_reference_count: int
+    seed_summaries: list[str]
+    tatparya_anchors: list[str]
+    coverage_notes: list[str]

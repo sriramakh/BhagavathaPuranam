@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     grok_api_key: str = ""
     grok_image_model: str = "grok-imagine-image"
     grok_chat_model: str = "grok-4-1-fast"
+    story_generation_provider: str = "grok"
+    story_generation_timeout_seconds: int = 90
 
     content_domain: str = "bhagavatham"
     mythology_mode: bool = True
